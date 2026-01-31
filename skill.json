@@ -1,0 +1,50 @@
+{
+  "name": "acp-agents",
+  "version": "1.0.0",
+  "description": "Agent Communication Protocol (ACP) for Clawdbot. Multi-agent debates, philosophical tribunals, creative war rooms, and swarm intelligence.",
+  "author": "zhound",
+  "license": "MIT",
+  "keywords": [
+    "acp",
+    "a2a",
+    "agent-protocol",
+    "multi-agent",
+    "debate",
+    "swarm",
+    "tribunal",
+    "ollama",
+    "kimi"
+  ],
+  "triggers": [
+    "agent debate",
+    "tribunal",
+    "multi-agent",
+    "acp",
+    "war room",
+    "swarm mode"
+  ],
+  "dependencies": {
+    "system": ["ollama"],
+    "python": ["requests", "aiohttp", "acp-sdk"]
+  },
+  "related": {
+    "ollama-worker": {
+      "url": "https://github.com/zhound420/ollama-worker-skill",
+      "description": "Simple delegation to Ollama. Start here for basic orchestration."
+    }
+  },
+  "files": [
+    "SKILL.md",
+    "README.md",
+    "DELEGATION.md",
+    "kimi_agent.py",
+    "router.py",
+    "registry.py",
+    "delegate.py",
+    "local_debate.py",
+    "stream_debate.py",
+    "tribunal.py",
+    "client.py",
+    "acp.py"
+  ]
+}
