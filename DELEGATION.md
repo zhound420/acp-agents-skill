@@ -21,8 +21,7 @@
 ## How to Delegate
 
 ```bash
-cd ~/clawd/skills/acp-agents
-python3 delegate.py <agent> "<task>"
+python3 ~/clawd/skills/a2a-agents/delegate.py <agent> "<task>"
 ```
 
 Agents: `researcher`, `analyst`, `writer`, `critic`, `general`

@@ -1,107 +1,93 @@
-# ACP Agents Skill
+# A2A Agents Skill
 
-Multi-agent orchestration for Clawdbot using the **Agent Communication Protocol (ACP)**. 
+**Agent-to-Agent (A2A) orchestration for Clawdbot.** Agents that autonomously call other agents.
 
-This skill enables **agents to talk to each other** — not just respond to humans.
-
-> **Related:** For simple single-agent delegation, see [ollama-worker](https://github.com/zhound420/ollama-worker-skill). Start there for basic "Claude delegates to Kimi." Come here when you need **agents communicating with agents**.
+> **New to multi-agent?** Start with [ollama-worker](https://github.com/zhound420/ollama-worker-skill) for simple "Claude delegates to Kimi" patterns. Come here when you need **agents communicating with agents**.
 
 ---
 
-## What is ACP?
+## What is A2A?
 
-**Agent Communication Protocol** is a standard that lets AI agents discover and communicate with each other.
+**Agent-to-Agent** means AI agents that can autonomously discover and communicate with other agents — no human orchestration required.
 
-**Before ACP:**
+**Before A2A:**
 ```
 Human → Agent → Human → Agent → Human
         (isolated, manual copy-paste between agents)
 ```
 
-**With ACP:**
+**With A2A:**
 ```
 Human → Agent A ←→ Agent B ←→ Agent C → Human
               (agents talk directly)
 ```
 
-### The Protocol
+### The Key Difference
 
-Every ACP-compliant agent exposes:
-
-```
-GET  /.well-known/agent.json   # "Here's who I am and what I can do"
-GET  /agents                    # List available agents on this server  
-POST /runs                      # Execute an agent task
-```
-
-**Agent Discovery Example:**
-```bash
-curl http://localhost:8000/.well-known/agent.json
-```
-```json
-{
-  "name": "kimi",
-  "description": "Kimi-k2.5 with thinking mode for complex reasoning",
-  "capabilities": ["streaming", "thinking", "vision"],
-  "input_content_types": ["*/*"],
-  "output_content_types": ["*/*"]
-}
-```
-
-**Agent-to-Agent Call:**
-```bash
-curl -X POST http://localhost:8000/runs \
-  -H "Content-Type: application/json" \
-  -d '{
-    "agent_name": "researcher",
-    "input": [{"parts": [{"content": "Analyze the EV market"}]}],
-    "mode": "sync"
-  }'
-```
-
-### Why This Matters
-
-| Without ACP | With ACP |
-|-------------|----------|
-| Agents are isolated silos | Agents discover each other |
-| Manual orchestration | Programmatic orchestration |
-| One machine only | Distributed across network |
-| No standard interface | Universal protocol |
-| Copy-paste between agents | Direct agent-to-agent calls |
+| Human Orchestration | A2A (Autonomous) |
+|---------------------|------------------|
+| Human decides which agent to call | Agent decides which agent to call |
+| Human passes context between agents | Agents share context directly |
+| Human synthesizes outputs | Agent synthesizes outputs |
+| Linear, manual | Parallel, autonomous |
 
 ---
 
-## Agent-to-Agent in Action
+## Quick Start
+
+### 1. Autonomous A2A Agent
+
+Give it a task — it decides what help it needs:
+
+```bash
+python3 ~/clawd/skills/a2a-agents/a2a_agent.py "Should we use Kubernetes for our startup?"
+```
+
+The agent will:
+1. Analyze the task
+2. Decide which specialists to call (researcher? analyst? both?)
+3. Call them autonomously
+4. Synthesize their responses
+5. Return a coherent answer
+
+### 2. Direct Specialist Delegation
+
+When you know which expert you need:
+
+```bash
+python3 ~/clawd/skills/a2a-agents/delegate.py researcher "Analyze the EV market"
+python3 ~/clawd/skills/a2a-agents/delegate.py analyst "Find patterns in this sales data"
+python3 ~/clawd/skills/a2a-agents/delegate.py writer "Draft a product launch email"
+python3 ~/clawd/skills/a2a-agents/delegate.py critic "Review this PR for issues"
+```
+
+---
+
+## A2A in Action
 
 ### Example 1: Research Pipeline
 ```python
-from router import ACPRouter
+# Agent autonomously fans out to multiple specialists
+result = await a2a_agent("Create a competitive analysis for AI coding assistants")
 
-router = ACPRouter()
-router.register_http("researcher", "http://localhost:8000")
-router.register_http("analyst", "http://localhost:8000")
-router.register_http("writer", "http://localhost:8000")
-
-# Agents call each other in sequence
-research = await router.call("researcher", "Research the AI chip market")
-analysis = await router.call("analyst", f"Find patterns in: {research}")
-report = await router.call("writer", f"Write executive summary: {analysis}")
+# Behind the scenes:
+# Agent → calls researcher (market data)
+# Agent → calls researcher (competitor features)  
+# Agent → calls analyst (synthesize findings)
+# Agent → returns unified analysis
 ```
 
 ### Example 2: Parallel Fan-Out
 ```python
-import asyncio
-
-# 5 researchers work simultaneously, then analyst synthesizes
+# 5 researchers work simultaneously
 topics = ["market size", "key players", "regulations", "technology", "trends"]
 
-# Fan-out: parallel execution
 results = await asyncio.gather(*[
     router.call("researcher", f"Research: {topic}")
     for topic in topics
 ])
 
-# Fan-in: synthesis
+# Synthesize
 synthesis = await router.call("analyst", f"Synthesize findings: {results}")
 ```
 
@@ -113,25 +99,10 @@ bear_case = await router.call("skeptic", f"Make the bear case for: {proposal}")
 
 # Third agent synthesizes
 decision = await router.call("analyst", f"""
-  Proposal: {proposal}
   Bull case: {bull_case}
   Bear case: {bear_case}
-  
   Provide balanced recommendation.
 """)
-```
-
-### Example 4: Code Review Swarm
-```python
-# Multiple specialist agents review simultaneously
-reviews = await asyncio.gather(
-    router.call("security_agent", f"Security review: {code}"),
-    router.call("performance_agent", f"Performance review: {code}"),
-    router.call("style_agent", f"Style review: {code}"),
-)
-
-# Synthesize into unified review
-final_review = await router.call("analyst", f"Combine reviews: {reviews}")
 ```
 
 ---
@@ -147,101 +118,62 @@ One agent is smart. Multiple agents working together are **multiplicative**:
 | Bottlenecked by context | Distributed context |
 | Linear pipelines | Branching workflows |
 
+---
+
 ## Real-World Applications
 
 ### 🔍 Parallel Research
 ```bash
-python swarm.py research \
-  --topic "Electric vehicle market" \
-  --agents "market-size,competitors,regulations,technology-trends,consumer-sentiment" \
-  --synthesize
+python3 a2a_agent.py "Research the electric vehicle market from 5 angles: market size, key players, regulations, technology trends, and consumer sentiment"
 ```
-5 agents research simultaneously, then synthesize findings. What takes 1 agent 25 minutes takes a swarm 5.
+Agent spawns 5 parallel research threads, then synthesizes.
 
 ### 📝 Content Pipeline
 ```bash
-python swarm.py pipeline \
-  --stages "brainstorm,draft,edit,critique,polish" \
-  --input "Write a landing page for a B2B SaaS product"
+python3 a2a_agent.py "Write a landing page for a B2B SaaS product"
 ```
-Each stage is a specialist. Brainstormer generates ideas → Drafter writes → Editor tightens → Critic finds holes → Polisher finalizes.
+Agent orchestrates: brainstorm → draft → edit → critique → polish.
 
 ### 🔐 Code Review Swarm
 ```bash
-python swarm.py code-review \
-  --file pull_request.diff \
-  --reviewers "security,performance,maintainability,test-coverage"
+python3 a2a_agent.py "Review this code for security, performance, and maintainability: [code]"
 ```
-Four specialist agents review your PR simultaneously:
-- **Security**: SQL injection, XSS, auth issues
-- **Performance**: N+1 queries, memory leaks, algorithmic complexity
-- **Maintainability**: Code smells, naming, documentation
-- **Test Coverage**: Missing edge cases, test quality
+Three specialists review simultaneously, findings merged.
 
 ### 📊 Decision Analysis
 ```bash
-python swarm.py decision \
-  --question "Should we build vs buy our auth system?" \
-  --perspectives "engineering,product,finance,security,timeline"
+python3 a2a_agent.py "Should we build or buy our auth system? Consider engineering, product, finance, security, and timeline perspectives."
 ```
-Get structured analysis from multiple viewpoints before making critical decisions.
+Multi-perspective analysis before critical decisions.
 
-### 📧 Inbox Processing
-```bash
-python swarm.py inbox \
-  --emails inbox_export.json \
-  --agents "categorizer,priority-scorer,response-drafter,calendar-checker"
-```
-- **Categorizer**: Sales, support, personal, spam, action-required
-- **Priority Scorer**: Urgency + importance matrix
-- **Response Drafter**: Draft replies for review
-- **Calendar Checker**: Flag scheduling conflicts
+---
 
-### 🏪 E-commerce Optimization (Example: Etsy)
-```bash
-python swarm.py etsy-optimize \
-  --shop "kyroku" \
-  --agents "seo-analyzer,competitor-scanner,pricing-optimizer,trend-spotter,listing-writer"
-```
-- **SEO Analyzer**: Keyword gaps, title optimization
-- **Competitor Scanner**: What similar shops do well
-- **Pricing Optimizer**: Market positioning analysis
-- **Trend Spotter**: Upcoming seasonal opportunities
-- **Listing Writer**: Generate optimized descriptions
+## Specialist Agents
 
-### 🎯 Hiring Pipeline
-```bash
-python swarm.py evaluate-candidate \
-  --resume candidate.pdf \
-  --job-description jd.txt \
-  --agents "skills-matcher,culture-assessor,red-flag-detector,interview-question-generator"
-```
+### Built-in Personas
 
-### 📰 News Digest
+| Agent | Purpose | Best For |
+|-------|---------|----------|
+| `researcher` | Gather & synthesize information | Market analysis, competitive intel |
+| `analyst` | Find patterns & insights | Data analysis, trend detection |
+| `writer` | Generate content | Drafts, copy, documentation |
+| `critic` | Find weaknesses & improve | Code review, QA, editing |
+| `coder` | Write and debug code | Implementation, architecture |
+| `security` | Security analysis | Vulnerability assessment, risk |
+
+### Usage
 ```bash
-python swarm.py news-digest \
-  --sources "hackernews,techcrunch,arxiv" \
-  --topics "AI,crypto,startups" \
-  --agents "scanner,summarizer,relevance-scorer,insight-extractor"
+python3 delegate.py researcher "Find all pricing data for competitor X"
+python3 delegate.py analyst "What patterns do you see in this sales data?"
+python3 delegate.py writer "Write a product description for..."
+python3 delegate.py critic "Review this copy for weaknesses"
 ```
 
 ---
 
-## Core Components
+## Orchestration Patterns
 
-### Agent Types
-
-| Agent | Purpose | Example Use |
-|-------|---------|-------------|
-| **Researcher** | Gather & synthesize information | Market analysis, competitive intel |
-| **Analyst** | Find patterns & insights | Data analysis, trend detection |
-| **Writer** | Generate content | Drafts, copy, documentation |
-| **Critic** | Find weaknesses & improve | Code review, QA, editing |
-| **Specialist** | Domain expertise | Security, legal, finance |
-
-### Orchestration Patterns
-
-**Fan-Out / Fan-In**
+### Fan-Out / Fan-In
 ```
            ┌─→ Agent A ─┐
 Input ────┼─→ Agent B ─┼──→ Synthesizer → Output
@@ -249,13 +181,13 @@ Input ────┼─→ Agent B ─┼──→ Synthesizer → Output
 ```
 Parallel processing with synthesis. Best for research, multi-perspective analysis.
 
-**Pipeline**
+### Pipeline
 ```
 Input → Agent A → Agent B → Agent C → Output
 ```
-Sequential refinement. Best for content creation, data processing.
+Sequential refinement. Best for content creation, iterative improvement.
 
-**Debate/Adversarial**
+### Debate/Adversarial
 ```
 Agent A ←──argue──→ Agent B
             ↓
@@ -263,7 +195,7 @@ Agent A ←──argue──→ Agent B
 ```
 Opposing viewpoints sharpen thinking. Best for decisions, risk analysis.
 
-**Hierarchical**
+### Hierarchical
 ```
          Coordinator
         /     |     \
@@ -275,85 +207,27 @@ Complex task decomposition. Best for large projects.
 
 ---
 
-## Quick Start
+## Core Components
 
-### 1. Start the ACP Server
-```bash
-cd ~/clawd/skills/acp-agents
-source .venv/bin/activate
-python kimi_agent.py
-```
-
-### 2. Use the Delegate CLI
-```bash
-# Single specialist
-python delegate.py researcher "Analyze the competitive landscape for AI coding assistants"
-
-# Full swarm
-python delegate.py swarm "Design a complete authentication system" --agents 5
-```
-
-### 3. Custom Swarm (Python)
-```python
-from router import ACPRouter
-
-router = ACPRouter()
-
-# Register agents
-router.register_http("researcher", "http://localhost:8000")
-router.register_http("analyst", "http://localhost:8000")
-router.register_http("writer", "http://localhost:8000")
-
-# Fan-out research
-topics = ["market size", "competitors", "regulations"]
-results = await asyncio.gather(*[
-    router.call("researcher", f"Research: {topic}")
-    for topic in topics
-])
-
-# Synthesize
-synthesis = await router.call("analyst", f"Synthesize these findings: {results}")
-```
+| File | Purpose |
+|------|---------|
+| `a2a_agent.py` | **Core** — Autonomous agent that calls other agents |
+| `delegate.py` | Direct delegation to specialist agents |
+| `router.py` | Unified agent calling interface |
+| `registry.py` | Agent discovery & tracking |
+| `kimi_agent.py` | HTTP server wrapping Kimi/Ollama |
+| `local_debate.py` | Multi-agent debates |
+| `tribunal.py` | Structured multi-perspective analysis |
 
 ---
 
-## Specialist Agents
+## Models
 
-### Built-in Personas
-
-```bash
-# Research & Analysis
-python delegate.py researcher "Find all pricing data for competitor X"
-python delegate.py analyst "What patterns do you see in this sales data?"
-
-# Content Creation
-python delegate.py writer "Write a product description for..."
-python delegate.py critic "Review this copy for weaknesses"
-
-# General
-python delegate.py general "Complex task that needs flexible handling"
-```
-
-### Custom Specialists
-
-Create domain experts by defining system prompts:
-
-```python
-SPECIALISTS = {
-    "security_auditor": {
-        "system": """You are a senior security engineer. 
-        Analyze code/systems for vulnerabilities.
-        Focus on: OWASP Top 10, auth issues, data exposure.
-        Output: severity-ranked findings with remediation."""
-    },
-    "pricing_strategist": {
-        "system": """You are a pricing strategy consultant.
-        Analyze markets and recommend pricing.
-        Consider: competition, value perception, elasticity.
-        Output: recommended price points with rationale."""
-    }
-}
-```
+| Model | Speed | Quality | Best For |
+|-------|-------|---------|----------|
+| `phi3:mini` | ⚡⚡⚡ | ⭐⭐ | Quick classification, simple tasks |
+| `llama3:8b` | ⚡⚡ | ⭐⭐⭐ | General local processing |
+| `kimi-k2.5:cloud` | ⚡ | ⭐⭐⭐⭐⭐ | Complex analysis, synthesis |
 
 ---
 
@@ -369,73 +243,17 @@ See which agents are working, their outputs, timing, and synthesis.
 
 ---
 
-## Configuration
-
-### Environment Variables
-```bash
-OLLAMA_HOST=http://localhost:11434
-ACP_PORT=8000
-```
-
-### Models
-| Model | Speed | Quality | Best For |
-|-------|-------|---------|----------|
-| `phi3:mini` | ⚡⚡⚡ | ⭐⭐ | Quick classification, simple tasks |
-| `llama3:8b` | ⚡⚡ | ⭐⭐⭐ | General local processing |
-| `kimi-k2.5:cloud` | ⚡ | ⭐⭐⭐⭐⭐ | Complex analysis, synthesis |
-
----
-
-## When to Use Swarms vs Single Agent
+## When to Use A2A vs Single Agent
 
 | Scenario | Recommendation |
 |----------|----------------|
 | Quick question | Single agent |
-| Research requiring multiple angles | **Swarm** |
-| Document that needs multiple review types | **Swarm** |
-| Sequential refinement (draft → edit) | **Pipeline** |
-| Time-sensitive, parallelize-able work | **Swarm** |
-| Need diverse perspectives on decision | **Swarm** |
+| Research requiring multiple angles | **A2A** |
+| Document needing multiple review types | **A2A** |
+| Sequential refinement (draft → edit) | **A2A Pipeline** |
+| Time-sensitive, parallelizable work | **A2A** |
+| Diverse perspectives on decision | **A2A** |
 | Simple task delegation | Single agent ([ollama-worker](https://github.com/zhound420/ollama-worker-skill)) |
-
----
-
-## Examples from Real Use
-
-### Etsy Shop Strategy (Creative War Room)
-```bash
-# 4 specialists analyzed Kyroku shop
-python delegate.py researcher "Etsy tech-apparel market analysis"
-python delegate.py analyst "Customer psychographics for tech-nature fusion"
-python delegate.py writer "New shop bio and product descriptions"  
-python delegate.py critic "Review all outputs for weaknesses"
-```
-Result: Complete brand strategy with market positioning, customer psychology ("Techno-Animist"), copy, and QC.
-
-### Architecture Decision
-```bash
-python swarm.py decision \
-  --question "Kubernetes vs Docker Compose for small startup?" \
-  --perspectives "devops,cost,scaling,complexity,hiring"
-```
-
-### PR Review
-```bash
-python swarm.py code-review \
-  --pr 1234 \
-  --reviewers "security,performance,readability"
-```
-
----
-
-## Building Custom Swarms
-
-See `SWARM-PATTERNS.md` for detailed patterns:
-- Research Swarm
-- Content Pipeline
-- Code Review Swarm
-- Decision Support
-- Monitoring/Alert Swarm
 
 ---
 
@@ -445,4 +263,4 @@ MIT
 
 ---
 
-*Part of the Clawdbot ecosystem. Start with [ollama-worker](https://github.com/zhound420/ollama-worker-skill) for simple delegation, graduate here for multi-agent orchestration.*
+*Part of the Clawdbot ecosystem. Start with [ollama-worker](https://github.com/zhound420/ollama-worker-skill) for simple delegation, graduate here for autonomous agent-to-agent orchestration.*

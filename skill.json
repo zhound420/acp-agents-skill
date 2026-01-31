@@ -1,42 +1,41 @@
 {
-  "name": "acp-agents",
+  "name": "a2a-agents",
   "version": "1.0.0",
-  "description": "Agent Communication Protocol (ACP) for Clawdbot. Multi-agent debates, philosophical tribunals, creative war rooms, and swarm intelligence.",
+  "description": "Agent-to-Agent (A2A) protocol for Clawdbot. Autonomous multi-agent orchestration — agents that call other agents without human intervention.",
   "author": "zhound",
   "license": "MIT",
   "keywords": [
-    "acp",
     "a2a",
-    "agent-protocol",
+    "agent-to-agent",
     "multi-agent",
-    "debate",
+    "autonomous-agents",
     "swarm",
-    "tribunal",
+    "orchestration",
     "ollama",
     "kimi"
   ],
   "triggers": [
-    "agent debate",
-    "tribunal",
+    "a2a",
+    "agent to agent",
     "multi-agent",
-    "acp",
-    "war room",
-    "swarm mode"
+    "agent swarm",
+    "autonomous agents"
   ],
   "dependencies": {
     "system": ["ollama"],
-    "python": ["requests", "aiohttp", "acp-sdk"]
+    "python": ["requests", "aiohttp"]
   },
   "related": {
     "ollama-worker": {
       "url": "https://github.com/zhound420/ollama-worker-skill",
-      "description": "Simple delegation to Ollama. Start here for basic orchestration."
+      "description": "Simple single-agent delegation. Start here for basic orchestration."
     }
   },
   "files": [
     "SKILL.md",
     "README.md",
     "DELEGATION.md",
+    "a2a_agent.py",
     "kimi_agent.py",
     "router.py",
     "registry.py",

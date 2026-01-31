@@ -1,92 +1,66 @@
-# ACP Agents Skill
+# A2A Agents Skill
 
 ## When to Use
-- Running multi-agent debates or conversations
-- Calling external AI agents via ACP protocol
-- Setting up agent-to-agent communication
+- Autonomous agent-to-agent communication
+- Running multi-agent swarms
+- Delegating complex tasks that benefit from multiple perspectives
 - Watching agent activity in real-time
 
-## Quick Commands (using `acp` CLI)
+## Quick Commands
 
 ```bash
-acp agents                    # List registered agents
-acp discover <endpoint>       # Discover agents at endpoint
-acp call <agent> <message>    # Call an agent
-acp debate <topic>            # Run local debate
-acp monitor                   # Open agent monitor
-acp server                    # Start ACP server
+# Autonomous A2A — agent decides what help it needs
+python3 ~/clawd/skills/a2a-agents/a2a_agent.py "Should we use Kubernetes for our startup?"
+
+# Direct delegation to specialist
+python3 ~/clawd/skills/a2a-agents/delegate.py researcher "Analyze the EV market"
+python3 ~/clawd/skills/a2a-agents/delegate.py analyst "Find patterns in this data"
+python3 ~/clawd/skills/a2a-agents/delegate.py writer "Draft a product description"
+python3 ~/clawd/skills/a2a-agents/delegate.py critic "Review this code for issues"
 ```
 
 ### Examples
 
 ```bash
-# List agents
-acp agents
+# Let the A2A agent autonomously call other agents
+python3 ~/clawd/skills/a2a-agents/a2a_agent.py "Create a go-to-market strategy for a B2B SaaS"
 
-# Discover agents at localhost
-acp discover http://localhost:8000
-
-# Call an agent
-acp call kimi "What is the meaning of life?"
-
-# Run a debate
-acp debate "Should AI have consciousness?"
-
-# Open monitor
-acp monitor
-```
-
-### Manual (without CLI)
-
-```bash
-# Start server
-cd ~/clawd/skills/acp-agents && source .venv/bin/activate
-python kimi_agent.py &
-
-# Run debate
-python local_debate.py "TOPIC" --rounds 2 --model llama3:8b
+# Direct specialist calls
+python3 ~/clawd/skills/a2a-agents/delegate.py researcher "Research pros/cons of Rust vs Go"
+python3 ~/clawd/skills/a2a-agents/delegate.py analyst "What patterns do you see in these sales numbers?"
 ```
 
 ## Key Files
 
 | File | Purpose |
 |------|---------|
-| `kimi_agent.py` | ACP server wrapping Kimi/Ollama |
+| `a2a_agent.py` | **Core** — Autonomous agent that calls other agents |
+| `delegate.py` | Direct delegation to specialist agents |
 | `router.py` | Unified agent calling interface |
-| `local_debate.py` | Local-only multi-agent debates |
-| `stream_debate.py` | Streaming ACP debates |
-| `client.py` | Simple ACP client for testing |
+| `kimi_agent.py` | HTTP server wrapping Kimi/Ollama |
+| `local_debate.py` | Multi-agent debates |
+| `tribunal.py` | Structured multi-perspective analysis |
 
 ## Models
 
-**Use for real work (smartest available):**
-- `kimi-k2.5:cloud` — Moonshot's best, strong reasoning
-- `deepseek-v3.1:cloud` — DeepSeek flagship (when available)
-- `glm-4.7:cloud` — GLM-4 full model
+**Use for real work:**
+- `kimi-k2.5:cloud` — Strong reasoning, best quality
+- `deepseek-v3.1:cloud` — DeepSeek flagship
 
-**Testing/demos only (not for production):**
+**Testing only:**
 - `llama3:8b` — Fast but limited
 - `phi3:mini` — Very fast but shallow
-- `glm-4.7-flash:q8_0` — Local fallback
-
-**Principle:** Quality over speed. Each agent should be intelligent enough that its output is directly usable.
 
 ## Agent Monitor
 
 Real-time dashboard showing agent activity:
 
 ```bash
-# View
 open ~/clawd/agent-monitor/index.html
-
-# Push events
-cd ~/clawd/agent-monitor
-python3 push.py "🔮 ORACLE" "Message here" "oracle"
-python3 push.py --clear  # Clear events
 ```
 
 ## Important Notes
 
-- **Use local models for debates** to avoid burning Anthropic rate limits
-- The orchestrator (Claude) doesn't need to poll — debates run autonomously
-- Transcripts saved to `~/clawd/agent-monitor/last_debate.json`
+- **A2A = Autonomous**: The agent *decides* when to call other agents — no human orchestration
+- Use local models for bulk work to avoid rate limits
+- All outputs go through QC before delivery to user
