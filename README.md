@@ -1,8 +1,140 @@
 # ACP Agents Skill
 
-Multi-agent orchestration for Clawdbot. Swarm intelligence for real work, not parlor tricks.
+Multi-agent orchestration for Clawdbot using the **Agent Communication Protocol (ACP)**. 
 
-> **Related:** For simple single-agent delegation, see [ollama-worker](https://github.com/zhound420/ollama-worker-skill). Start there for basic "Claude delegates to Kimi." Come here when you need **parallel agents**, **pipelines**, or **multi-perspective analysis**.
+This skill enables **agents to talk to each other** — not just respond to humans.
+
+> **Related:** For simple single-agent delegation, see [ollama-worker](https://github.com/zhound420/ollama-worker-skill). Start there for basic "Claude delegates to Kimi." Come here when you need **agents communicating with agents**.
+
+---
+
+## What is ACP?
+
+**Agent Communication Protocol** is a standard that lets AI agents discover and communicate with each other.
+
+**Before ACP:**
+```
+Human → Agent → Human → Agent → Human
+        (isolated, manual copy-paste between agents)
+```
+
+**With ACP:**
+```
+Human → Agent A ←→ Agent B ←→ Agent C → Human
+              (agents talk directly)
+```
+
+### The Protocol
+
+Every ACP-compliant agent exposes:
+
+```
+GET  /.well-known/agent.json   # "Here's who I am and what I can do"
+GET  /agents                    # List available agents on this server  
+POST /runs                      # Execute an agent task
+```
+
+**Agent Discovery Example:**
+```bash
+curl http://localhost:8000/.well-known/agent.json
+```
+```json
+{
+  "name": "kimi",
+  "description": "Kimi-k2.5 with thinking mode for complex reasoning",
+  "capabilities": ["streaming", "thinking", "vision"],
+  "input_content_types": ["*/*"],
+  "output_content_types": ["*/*"]
+}
+```
+
+**Agent-to-Agent Call:**
+```bash
+curl -X POST http://localhost:8000/runs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agent_name": "researcher",
+    "input": [{"parts": [{"content": "Analyze the EV market"}]}],
+    "mode": "sync"
+  }'
+```
+
+### Why This Matters
+
+| Without ACP | With ACP |
+|-------------|----------|
+| Agents are isolated silos | Agents discover each other |
+| Manual orchestration | Programmatic orchestration |
+| One machine only | Distributed across network |
+| No standard interface | Universal protocol |
+| Copy-paste between agents | Direct agent-to-agent calls |
+
+---
+
+## Agent-to-Agent in Action
+
+### Example 1: Research Pipeline
+```python
+from router import ACPRouter
+
+router = ACPRouter()
+router.register_http("researcher", "http://localhost:8000")
+router.register_http("analyst", "http://localhost:8000")
+router.register_http("writer", "http://localhost:8000")
+
+# Agents call each other in sequence
+research = await router.call("researcher", "Research the AI chip market")
+analysis = await router.call("analyst", f"Find patterns in: {research}")
+report = await router.call("writer", f"Write executive summary: {analysis}")
+```
+
+### Example 2: Parallel Fan-Out
+```python
+import asyncio
+
+# 5 researchers work simultaneously, then analyst synthesizes
+topics = ["market size", "key players", "regulations", "technology", "trends"]
+
+# Fan-out: parallel execution
+results = await asyncio.gather(*[
+    router.call("researcher", f"Research: {topic}")
+    for topic in topics
+])
+
+# Fan-in: synthesis
+synthesis = await router.call("analyst", f"Synthesize findings: {results}")
+```
+
+### Example 3: Adversarial Review
+```python
+# Two agents with opposing viewpoints
+bull_case = await router.call("optimist", f"Make the bull case for: {proposal}")
+bear_case = await router.call("skeptic", f"Make the bear case for: {proposal}")
+
+# Third agent synthesizes
+decision = await router.call("analyst", f"""
+  Proposal: {proposal}
+  Bull case: {bull_case}
+  Bear case: {bear_case}
+  
+  Provide balanced recommendation.
+""")
+```
+
+### Example 4: Code Review Swarm
+```python
+# Multiple specialist agents review simultaneously
+reviews = await asyncio.gather(
+    router.call("security_agent", f"Security review: {code}"),
+    router.call("performance_agent", f"Performance review: {code}"),
+    router.call("style_agent", f"Style review: {code}"),
+)
+
+# Synthesize into unified review
+final_review = await router.call("analyst", f"Combine reviews: {reviews}")
+```
+
+---
 
 ## Why Agent Swarms?
 
